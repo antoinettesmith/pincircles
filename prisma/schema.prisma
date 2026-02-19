@@ -1,0 +1,141 @@
+// PinCircles - Interest-based collaborative image-sharing platform
+// Prisma schema with proper relational mapping and indexing
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============ CORE MODELS ============
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  username  String   @unique
+  password  String
+  avatar    String?
+  role      Role     @default(MEMBER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  memberships Membership[]
+  pins        Pin[]
+  votes       Vote[]
+  comments    Comment[]
+  ownedCircles Circle[] @relation("CircleOwner")
+
+  @@index([email])
+  @@index([username])
+}
+
+enum Role {
+  ADMIN
+  MEMBER
+}
+
+model Category {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  slug        String   @unique
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  circles Circle[]
+
+  @@index([slug])
+}
+
+model Circle {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  description String?
+  imageUrl    String?
+  categoryId  String
+  ownerId     String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  category    Category     @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  owner       User         @relation("CircleOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  memberships Membership[]
+  pins        Pin[]
+
+  @@index([categoryId])
+  @@index([ownerId])
+  @@index([slug])
+}
+
+model Membership {
+  id        String   @id @default(cuid())
+  userId    String
+  circleId  String
+  role      Role     @default(MEMBER)
+  joinedAt  DateTime @default(now())
+  lastActiveAt DateTime @default(now())
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  circle Circle @relation(fields: [circleId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, circleId])
+  @@index([userId])
+  @@index([circleId])
+}
+
+model Pin {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  imageUrl    String
+  circleId    String
+  authorId    String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  circle   Circle   @relation(fields: [circleId], references: [id], onDelete: Cascade)
+  author   User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  votes    Vote[]
+  comments Comment[]
+
+  @@index([circleId])
+  @@index([authorId])
+  @@index([createdAt])
+}
+
+model Vote {
+  id        String   @id @default(cuid())
+  userId    String
+  pinId     String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pin  Pin  @relation(fields: [pinId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, pinId])
+  @@index([userId])
+  @@index([pinId])
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  content   String
+  userId    String
+  pinId     String
+  parentId  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pin      Pin      @relation(fields: [pinId], references: [id], onDelete: Cascade)
+  parent   Comment? @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies  Comment[] @relation("CommentReplies")
+
+  @@index([pinId])
+  @@index([userId])
+  @@index([parentId])
+}
