@@ -7,6 +7,9 @@ import { registerUser } from "@/services/auth.service";
 import { apiError, apiSuccess } from "@/lib/api-middleware";
 import { z } from "zod";
 
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+
 const schema = z.object({
   email: z.string().email(),
   username: z.string().min(2).max(30).regex(/^[a-zA-Z0-9_]+$/),

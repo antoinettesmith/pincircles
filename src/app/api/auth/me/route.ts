@@ -7,6 +7,9 @@ import { requireAuth } from "@/lib/api-middleware";
 import { getUserById } from "@/services/auth.service";
 import { apiError, apiSuccess } from "@/lib/api-middleware";
 
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+
 export async function GET(request: NextRequest) {
   const authResult = requireAuth(request);
   if (authResult instanceof Response) return authResult;

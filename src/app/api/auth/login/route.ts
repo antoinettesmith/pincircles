@@ -7,6 +7,9 @@ import { loginUser } from "@/services/auth.service";
 import { apiError, apiSuccess } from "@/lib/api-middleware";
 import { z } from "zod";
 
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+
 const schema = z.object({
   email: z.string().email(),
   password: z.string().min(1),
