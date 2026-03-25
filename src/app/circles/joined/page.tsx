@@ -6,6 +6,21 @@ import Image from "next/image";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { apiFetch } from "@/lib/api-client";
 
+const FALLBACK_IMAGE = "https://picsum.photos/seed/circle-fb/400/200";
+
+function CircleImage({ src, alt }: { src: string; alt: string }) {
+  const [imgSrc, setImgSrc] = useState(src);
+  return (
+    <Image
+      src={imgSrc}
+      alt={alt}
+      fill
+      className="object-cover"
+      onError={() => setImgSrc(FALLBACK_IMAGE)}
+    />
+  );
+}
+
 interface Membership {
   circle: {
     id: string;
@@ -71,7 +86,7 @@ export default function JoinedCirclesPage() {
             >
               <div className="relative h-32 bg-circle-surface">
                 {circle.imageUrl ? (
-                  <Image src={circle.imageUrl} alt={circle.name} fill className="object-cover" />
+                  <CircleImage src={circle.imageUrl} alt={circle.name} />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-4xl text-circle-accent">
                     ◯

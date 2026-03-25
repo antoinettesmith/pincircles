@@ -3,6 +3,7 @@
  */
 import { prisma } from "@/lib/prisma";
 import { slugify, getPagination } from "@/lib/utils";
+import { filterProfanity } from "@/lib/profanity";
 
 export interface CreateCircleInput {
   name: string;
@@ -101,6 +102,86 @@ export async function getCircleById(id: string) {
 export async function getCircleBySlugOrId(param: string) {
   const isCuid = param.length === 25 && param.startsWith("c");
   return isCuid ? getCircleById(param) : getCircleBySlug(param);
+}
+
+/** Get circle-level comments (general discussion, not pin-specific) with nested replies */
+export async function getCircleComments(circleId: string, limit: number = 50) {
+  const comments = await prisma.circleComment.findMany({
+    where: { circleId, parentId: null },
+    include: {
+      user: { select: { id: true, username: true, avatar: true } },
+      replies: {
+        include: {
+          user: { select: { id: true, username: true, avatar: true } },
+          replies: {
+            include: {
+              user: { select: { id: true, username: true, avatar: true } },
+            },
+          },
+        },
+      },
+    },
+    orderBy: { createdAt: "asc" },
+    take: limit,
+  });
+
+  const sortReplies = (
+    items: Array<{ createdAt: Date; replies?: unknown[] }>
+  ): Array<{ createdAt: Date; replies: unknown[] }> =>
+    items
+      .map((item) => ({
+        ...item,
+        replies: Array.isArray(item.replies)
+          ? sortReplies(item.replies as Array<{ createdAt: Date; replies?: unknown[] }>)
+          : [],
+      }))
+      .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+
+  return sortReplies(comments);
+}
+
+export async function createCircleComment(input: {
+  content: string;
+  userId: string;
+  circleId: string;
+  parentId?: string;
+}) {
+  const filteredContent = filterProfanity(input.content);
+
+  const circle = await prisma.circle.findUnique({ where: { id: input.circleId } });
+  if (!circle) throw new Error("Circle not found");
+
+  return prisma.circleComment.create({
+    data: {
+      content: filteredContent,
+      userId: input.userId,
+      circleId: input.circleId,
+      parentId: input.parentId,
+    },
+    include: {
+      user: { select: { id: true, username: true, avatar: true } },
+    },
+  });
+}
+
+/** Get recent comments from pins in a circle */
+export async function getCircleRecentComments(circleId: string, limit: number = 10) {
+  const pins = await prisma.pin.findMany({
+    where: { circleId },
+    select: { id: true },
+  });
+  const pinIds = pins.map((p) => p.id);
+  if (pinIds.length === 0) return [];
+
+  return prisma.comment.findMany({
+    where: { pinId: { in: pinIds } },
+    include: {
+      user: { select: { id: true, username: true } },
+      pin: { select: { id: true, title: true } },
+    },
+    orderBy: { createdAt: "desc" },
+    take: limit,
+  });
 }
 
 export async function getJoinedCircles(userId: string) {

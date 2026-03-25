@@ -22,11 +22,12 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  memberships Membership[]
-  pins        Pin[]
-  votes       Vote[]
-  comments    Comment[]
-  ownedCircles Circle[] @relation("CircleOwner")
+  memberships     Membership[]
+  pins            Pin[]
+  votes           Vote[]
+  comments        Comment[]
+  circleComments  CircleComment[]
+  ownedCircles    Circle[] @relation("CircleOwner")
 
   @@index([email])
   @@index([username])
@@ -61,10 +62,11 @@ model Circle {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  category    Category     @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-  owner       User         @relation("CircleOwner", fields: [ownerId], references: [id], onDelete: Cascade)
-  memberships Membership[]
-  pins        Pin[]
+  category       Category        @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  owner          User            @relation("CircleOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  memberships    Membership[]
+  pins           Pin[]
+  circleComments CircleComment[]
 
   @@index([categoryId])
   @@index([ownerId])
@@ -136,6 +138,25 @@ model Comment {
   replies  Comment[] @relation("CommentReplies")
 
   @@index([pinId])
+  @@index([userId])
+  @@index([parentId])
+}
+
+model CircleComment {
+  id        String   @id @default(cuid())
+  content   String
+  userId    String
+  circleId  String
+  parentId  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user     User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  circle   Circle        @relation(fields: [circleId], references: [id], onDelete: Cascade)
+  parent   CircleComment? @relation("CircleCommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies  CircleComment[] @relation("CircleCommentReplies")
+
+  @@index([circleId])
   @@index([userId])
   @@index([parentId])
 }

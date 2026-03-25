@@ -1,173 +1,254 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useAuth } from "@/components/providers/AuthProvider";
-import { apiFetch } from "@/lib/api-client";
 import { PinCard } from "@/components/pins/PinCard";
-import toast from "react-hot-toast";
+import { CircleCommentThread } from "@/components/comments/CircleCommentThread";
+import { CommentContent } from "@/components/comments/CommentContent";
+import { getDemoCircle, getPinsForCircle, type DemoCircleComment } from "@/lib/demo-content";
 
 interface CircleDetailClientProps {
   params: Promise<{ slug: string }>;
 }
 
-interface Circle {
-  id: string;
-  name: string;
-  slug: string;
-  description?: string | null;
-  imageUrl?: string | null;
-  category: { name: string };
-  owner: { username: string };
-  _count: { memberships: number; pins: number };
-}
-
-interface Pin {
-  id: string;
-  title: string;
-  description?: string | null;
-  imageUrl: string;
-  circle?: { name: string; slug: string };
-  author?: { username: string };
-  _count?: { votes: number; comments: number };
-  userHasVoted?: boolean;
-}
+const pinnedPromptBySlug: Record<string, string> = {
+  "ui-design": "What makes a visual reference actually useful to save: layout, hierarchy, interaction, or the reasoning behind it?",
+  "travel-photos": "Which shots make you want to book the trip immediately, and which ones feel more like personal journal images?",
+  foodie: "What turns a food post from just appetizing into something you would genuinely save and try later?",
+  "cozy-homes": "What detail makes a room feel lived in rather than staged: lighting, texture, books, plants, or layout?",
+  "workspace-goals": "What makes a setup worth copying in real life: workflow, comfort, lighting, or desk styling?",
+  "shows-to-watch": "What series do you keep recommending because the mood, pacing, or production design stays with you?",
+  "style-edit": "What makes a style reference feel current without becoming too trend-chased to be useful next season?",
+  "social-media-marketing-careers": "What portfolio signal actually helps social candidates stand out right now: strategy, writing, metrics, or taste?",
+  "job-hunting-2026": "What has been the most useful part of your search so far: networking, resume edits, targeted applications, or interview prep?",
+  budgeting: "What money habit helped you the most once you stopped trying to build the perfect system and just started tracking honestly?",
+  "mood-boarding": "When you build a mood board, what do you lock first: color, material, silhouette, references, or emotional tone?",
+  "remote-careers": "What makes a remote role feel sustainable long term: async culture, documentation, flexibility, or management style?",
+  investing: "What explanation or resource finally made long-term investing feel understandable instead of intimidating?",
+};
 
 export function CircleDetailClient({ params }: CircleDetailClientProps) {
-  const [slug, setSlug] = useState<string>("");
-  const [circle, setCircle] = useState<Circle | null>(null);
-  const [pins, setPins] = useState<Pin[]>([]);
-  const [isMember, setIsMember] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [actionLoading, setActionLoading] = useState(false);
+  const [slug, setSlug] = useState("");
+  const [discussion, setDiscussion] = useState<DemoCircleComment[]>([]);
+  const [discussionText, setDiscussionText] = useState("");
+  const [isMember, setIsMember] = useState(true);
+  const pinsSectionRef = useRef<HTMLDivElement>(null);
   const { user } = useAuth();
 
   useEffect(() => {
-    params.then((p) => setSlug(p.slug));
+    params.then((value) => setSlug(value.slug));
   }, [params]);
 
-  useEffect(() => {
-    if (!slug) return;
-    setLoading(true);
-    apiFetch<Circle>(`/circles/${slug}`)
-      .then(async (c) => {
-        setCircle(c);
-        const { pins: pinList } = await apiFetch<{ pins: Pin[] }>(
-          `/pins?circleId=${c.id}&sort=new&limit=50`
-        );
-        setPins(pinList);
-      })
-      .catch(() => setCircle(null))
-      .finally(() => setLoading(false));
-  }, [slug]);
+  const circle = useMemo(() => (slug ? getDemoCircle(slug) : null), [slug]);
+  const pins = useMemo(() => (slug ? getPinsForCircle(slug) : []), [slug]);
 
   useEffect(() => {
-    if (!circle || !user) return;
-    apiFetch<{ memberships: Array<{ circleId: string }> }>("/circles/joined")
-      .then((data) => {
-        const joined = data.memberships.some((m) => m.circleId === circle.id);
-        setIsMember(joined);
-      })
-      .catch(() => setIsMember(false));
-  }, [circle, user]);
-
-  const handleJoinLeave = async () => {
-    if (!user || !circle || actionLoading) return;
-    setActionLoading(true);
-    try {
-      if (isMember) {
-        await apiFetch(`/circles/${circle.id}/leave`, { method: "POST" });
-        setIsMember(false);
-        toast.success("Left circle");
-      } else {
-        await apiFetch(`/circles/${circle.id}/join`, { method: "POST" });
-        setIsMember(true);
-        toast.success("Joined circle!");
-      }
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Action failed");
-    } finally {
-      setActionLoading(false);
+    if (circle) {
+      setDiscussion(circle.discussion);
     }
-  };
+  }, [circle]);
 
-  if (loading || !circle) {
+  const pinComments = useMemo(() => {
+    return pins
+      .flatMap((pin) =>
+        pin.comments.slice(0, 1).map((comment) => ({
+          ...comment,
+          pin: { id: pin.id, title: pin.title },
+        }))
+      )
+      .slice(0, 6);
+  }, [pins]);
+
+  const featuredPin = pins[0] ?? null;
+
+  if (!circle) {
     return (
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        <div className="h-64 bg-circle-surface rounded-2xl animate-pulse" />
+      <div className="section-shell py-8">
+        <div className="glass-panel rounded-[2rem] p-10 text-center">
+          <p className="font-display text-2xl font-bold text-circle-ink">Circle not found.</p>
+        </div>
       </div>
     );
   }
 
+  const pinnedPrompt =
+    pinnedPromptBySlug[circle.slug] ??
+    "What kinds of posts make this circle feel distinct enough to revisit instead of only saving once?";
+
+  const appendReplyToThread = (
+    comments: DemoCircleComment[],
+    parentId: string,
+    reply: DemoCircleComment
+  ): DemoCircleComment[] =>
+    comments.map((comment) => {
+      if (comment.id === parentId) {
+        return { ...comment, replies: [...(comment.replies ?? []), reply] };
+      }
+
+      if (!comment.replies?.length) {
+        return comment;
+      }
+
+      return {
+        ...comment,
+        replies: appendReplyToThread(comment.replies, parentId, reply),
+      };
+    });
+
+  const handleReply = async (content: string, parentId: string) => {
+    const reply: DemoCircleComment = {
+      id: `reply-${Date.now()}`,
+      content,
+      createdAt: new Date().toISOString(),
+      user: { id: "local-user", username: user?.username ?? "guest" },
+    };
+
+    setDiscussion((prev) => appendReplyToThread(prev, parentId, reply));
+  };
+
+  const handleComment = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!discussionText.trim()) return;
+    const next: DemoCircleComment = {
+      id: `comment-${Date.now()}`,
+      content: discussionText.trim(),
+      createdAt: new Date().toISOString(),
+      user: { id: "local-user", username: user?.username ?? "guest" },
+    };
+    setDiscussion((prev) => [next, ...prev]);
+    setDiscussionText("");
+  };
+
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8">
-      <div className="bg-white rounded-2xl shadow border border-circle-border overflow-hidden mb-8">
-        <div className="relative h-48 bg-circle-surface">
-          {circle.imageUrl ? (
-            <Image src={circle.imageUrl} alt={circle.name} fill className="object-cover" />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center text-6xl text-circle-accent">
-              ◯
-            </div>
-          )}
-        </div>
-        <div className="p-6">
-          <span className="text-sm text-circle-primary font-medium">{circle.category.name}</span>
-          <h1 className="text-3xl font-bold mt-1">{circle.name}</h1>
-          <p className="text-circle-accent mt-2">{circle.description || "No description"}</p>
-          <div className="flex flex-wrap items-center gap-4 mt-4">
-            <span className="text-sm text-circle-accent">
-              {circle._count.memberships} members • {circle._count.pins} pins
-            </span>
-            <span className="text-sm text-circle-accent">by {circle.owner.username}</span>
-            {user && (
-              <>
-                <button
-                  onClick={handleJoinLeave}
-                  disabled={actionLoading}
-                  className={`px-4 py-2 rounded-full text-sm font-medium ${
-                    isMember
-                      ? "border border-circle-border hover:bg-red-50 hover:border-red-200 hover:text-red-600"
-                      : "bg-circle-primary text-white hover:bg-circle-secondary"
-                  }`}
-                >
-                  {actionLoading ? "..." : isMember ? "Leave" : "Join"}
-                </button>
-                {isMember && (
-                  <Link
-                    href={`/circles/${circle.slug}/create-pin`}
-                    className="px-4 py-2 rounded-full bg-circle-primary text-white text-sm font-medium hover:bg-circle-secondary"
-                  >
-                    Create Pin
-                  </Link>
-                )}
-                {circle.owner.username === user.username && (
-                  <Link
-                    href={`/circles/${circle.slug}/analytics`}
-                    className="px-4 py-2 rounded-full border border-circle-border text-sm font-medium hover:bg-circle-surface"
-                  >
-                    Analytics
-                  </Link>
-                )}
-              </>
-            )}
+    <div className="section-shell py-8 sm:py-10">
+      <div className="overflow-hidden rounded-[2rem] border border-white/70 bg-white/80 shadow-xl shadow-amber-950/5">
+        <div className="relative h-56 sm:h-72">
+          <Image src={circle.imageUrl} alt={circle.name} fill className="object-cover" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
+          <div className="absolute inset-x-0 bottom-0 p-6 text-white">
+            <p className="text-sm font-semibold uppercase tracking-[0.24em] text-white/70">
+              {circle.category.name}
+            </p>
+            <h1 className="mt-2 font-display text-4xl font-bold sm:text-5xl">{circle.name}</h1>
+            <p className="mt-3 max-w-3xl text-sm leading-7 text-white/80 sm:text-base">
+              {circle.description}
+            </p>
           </div>
+        </div>
+        <div className="flex flex-wrap items-center gap-4 p-6 text-sm text-circle-accent">
+          <span>{circle._count.memberships.toLocaleString()} members</span>
+          <span>{circle._count.pins} pins</span>
+          <span>by {circle.owner.username}</span>
+          <button
+            onClick={() => setIsMember((value) => !value)}
+            className={`rounded-full px-4 py-2 font-semibold ${
+              isMember
+                ? "border border-circle-border bg-white text-circle-ink hover:bg-circle-mist"
+                : "bg-circle-primary text-white hover:bg-circle-secondary"
+            }`}
+          >
+            {isMember ? "Joined" : "Join Circle"}
+          </button>
+          <button
+            onClick={() => pinsSectionRef.current?.scrollIntoView({ behavior: "smooth" })}
+            className="rounded-full border border-circle-border bg-white px-4 py-2 font-semibold text-circle-ink hover:bg-circle-mist"
+          >
+            Jump to Pins
+          </button>
+          <Link
+            href={`/circles/${circle.slug}/analytics`}
+            className="rounded-full border border-circle-border bg-white px-4 py-2 font-semibold text-circle-ink hover:bg-circle-mist"
+          >
+            View Insights
+          </Link>
         </div>
       </div>
 
-      <h2 className="text-xl font-semibold mb-4">Pins</h2>
-      {pins.length === 0 ? (
-        <div className="text-center py-16 bg-white rounded-2xl border border-circle-border text-circle-accent">
-          <p>No pins yet. {isMember && "Be the first to share!"}</p>
-        </div>
-      ) : (
+      <div className="mt-8 grid gap-8 lg:grid-cols-[1.15fr_0.85fr]">
+        <section className="glass-panel rounded-[2rem] p-6">
+          <div className="rounded-[1.5rem] border border-circle-border bg-white/85 p-5">
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-circle-accent">
+              Pinned Prompt
+            </p>
+            <p className="mt-3 text-base leading-7 text-circle-ink">{pinnedPrompt}</p>
+          </div>
+
+          <h2 className="font-display text-2xl font-bold text-circle-ink">Discussion</h2>
+          <p className="mt-2 text-sm leading-6 text-circle-accent">
+            Swap references, explain why a post works, and build taste together instead of only collecting screenshots.
+          </p>
+          <form onSubmit={handleComment} className="mt-5">
+            <textarea
+              value={discussionText}
+              onChange={(e) => setDiscussionText(e.target.value)}
+              placeholder="Add a take, question, or critique..."
+              rows={3}
+              className="w-full rounded-2xl border border-circle-border bg-white/90 px-4 py-3 text-sm outline-none focus:border-circle-primary"
+            />
+            <button
+              type="submit"
+              className="mt-3 rounded-full bg-circle-primary px-4 py-2 text-sm font-semibold text-white hover:bg-circle-secondary"
+            >
+              Post to Discussion
+            </button>
+          </form>
+          <div className="mt-6 space-y-4">
+            {discussion.map((comment) => (
+              <CircleCommentThread
+                key={comment.id}
+                comment={comment}
+                circleId={circle.id}
+                currentUsername={user?.username}
+                onReply={handleReply}
+              />
+            ))}
+          </div>
+        </section>
+
+        <aside className="glass-panel rounded-[2rem] p-6">
+          {featuredPin && (
+            <div className="rounded-[1.5rem] border border-circle-border bg-white/85 p-5">
+              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-circle-accent">
+                Featured Pin
+              </p>
+              <Link href={`/pins/${featuredPin.id}`} className="mt-3 block hover:opacity-90">
+                <p className="font-display text-2xl font-bold text-circle-ink">{featuredPin.title}</p>
+                <p className="mt-2 text-sm leading-6 text-circle-accent">{featuredPin.description}</p>
+                <p className="mt-3 text-sm font-semibold text-circle-primary">Open pin discussion</p>
+              </Link>
+            </div>
+          )}
+
+          <h2 className="mt-5 font-display text-2xl font-bold text-circle-ink">Recent Activity</h2>
+          <div className="mt-5 space-y-4">
+            {pinComments.map((comment) => (
+              <div key={comment.id} className="rounded-2xl border border-circle-border bg-white/80 p-4">
+                <p className="text-sm">
+                  <span className="font-semibold text-circle-ink">{comment.user.username}</span>
+                  <span className="text-circle-accent"> on </span>
+                  <Link href={`/pins/${comment.pin.id}`} className="font-semibold text-circle-primary hover:underline">
+                    {comment.pin.title}
+                  </Link>
+                </p>
+                <p className="mt-2 text-sm leading-6 text-circle-accent">
+                  <CommentContent content={comment.content} />
+                </p>
+              </div>
+            ))}
+          </div>
+        </aside>
+      </div>
+
+      <div ref={pinsSectionRef} className="mt-10">
+        <h2 className="mb-4 font-display text-3xl font-bold text-circle-ink">Pins</h2>
         <div className="pin-grid">
           {pins.map((pin) => (
-            <PinCard key={pin.id} pin={{ ...pin, circle: { name: circle.name, slug: circle.slug } }} />
+            <PinCard key={pin.id} pin={pin} />
           ))}
         </div>
-      )}
+      </div>
     </div>
   );
 }

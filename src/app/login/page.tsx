@@ -33,44 +33,55 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center px-4">
-      <div className="w-full max-w-md">
-        <h1 className="text-3xl font-bold text-center mb-6">Log in to PinCircles</h1>
-        <form onSubmit={handleSubmit} className="space-y-4 bg-white p-8 rounded-2xl shadow-lg border border-circle-border">
-          <div>
-            <label className="block text-sm font-medium mb-1">Email</label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              className="w-full px-4 py-2 rounded-lg border border-circle-border focus:ring-2 focus:ring-circle-primary focus:border-transparent"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Password</label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              className="w-full px-4 py-2 rounded-lg border border-circle-border focus:ring-2 focus:ring-circle-primary focus:border-transparent"
-            />
-          </div>
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full py-3 rounded-full bg-circle-primary text-white font-medium hover:bg-circle-secondary disabled:opacity-50 transition-colors"
-          >
-            {loading ? "Logging in..." : "Log in"}
-          </button>
-        </form>
-        <p className="text-center mt-4 text-circle-accent">
-          Don&apos;t have an account?{" "}
-          <Link href="/register" className="text-circle-primary font-medium hover:underline">
-            Sign up
-          </Link>
-        </p>
+    <div className="section-shell py-10 sm:py-16">
+      <div className="grid items-center gap-8 lg:grid-cols-[0.95fr_0.75fr]">
+        <div className="space-y-5">
+          <p className="text-sm font-semibold uppercase tracking-[0.24em] text-circle-accent">Welcome back</p>
+          <h1 className="max-w-xl font-display text-5xl font-bold leading-tight text-circle-ink">
+            Log in to your circles and pick up where inspiration left off.
+          </h1>
+          <p className="max-w-xl text-lg leading-8 text-circle-accent">
+            Return to the feed, revisit community conversations, and surface the next great idea.
+          </p>
+        </div>
+
+        <div className="glass-panel w-full rounded-[2rem] p-8">
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="mb-1 block text-sm font-semibold text-circle-ink">Email</label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                className="w-full rounded-2xl border border-circle-border bg-white/90 px-4 py-3 focus:border-circle-primary focus:outline-none"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-semibold text-circle-ink">Password</label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                className="w-full rounded-2xl border border-circle-border bg-white/90 px-4 py-3 focus:border-circle-primary focus:outline-none"
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full rounded-full bg-circle-primary py-3 text-base font-semibold text-white shadow-lg shadow-circle-primary/20 transition-colors hover:bg-circle-secondary disabled:opacity-50"
+            >
+              {loading ? "Logging in..." : "Log in"}
+            </button>
+          </form>
+          <p className="mt-5 text-center text-circle-accent">
+            Don&apos;t have an account?{" "}
+            <Link href="/register" className="font-semibold text-circle-primary hover:underline">
+              Sign up
+            </Link>
+          </p>
+        </div>
       </div>
     </div>
   );

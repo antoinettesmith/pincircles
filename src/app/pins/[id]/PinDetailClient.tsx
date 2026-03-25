@@ -1,215 +1,255 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useAuth } from "@/components/providers/AuthProvider";
-import { apiFetch } from "@/lib/api-client";
-import toast from "react-hot-toast";
+import { CommentThread } from "@/components/comments/CommentThread";
+import { PinCard } from "@/components/pins/PinCard";
+import { getDemoPin, getPinsForCircle, type DemoComment } from "@/lib/demo-content";
 
 interface PinDetailClientProps {
   params: Promise<{ id: string }>;
 }
 
-interface Comment {
-  id: string;
-  content: string;
-  createdAt: string;
-  user: { id: string; username: string };
-  replies?: Comment[];
-}
-
-interface Pin {
-  id: string;
-  title: string;
-  description?: string | null;
-  imageUrl: string;
-  circle?: { name: string; slug: string };
-  author?: { username: string };
-  _count?: { votes: number; comments: number };
-  userHasVoted?: boolean;
-  comments?: Comment[];
-}
-
 export function PinDetailClient({ params }: PinDetailClientProps) {
-  const [pinId, setPinId] = useState<string>("");
-  const [pin, setPin] = useState<Pin | null>(null);
+  const [pinId, setPinId] = useState("");
   const [commentText, setCommentText] = useState("");
-  const [loading, setLoading] = useState(true);
+  const [comments, setComments] = useState<DemoComment[]>([]);
   const [voteCount, setVoteCount] = useState(0);
   const [hasVoted, setHasVoted] = useState(false);
-  const [voteLoading, setVoteLoading] = useState(false);
-  const [commentLoading, setCommentLoading] = useState(false);
+  const [saveCount, setSaveCount] = useState(0);
+  const [isSaved, setIsSaved] = useState(false);
   const { user } = useAuth();
 
   useEffect(() => {
-    params.then((p) => setPinId(p.id));
+    params.then((value) => setPinId(value.id));
   }, [params]);
 
+  const pin = useMemo(() => (pinId ? getDemoPin(pinId) : null), [pinId]);
+
   useEffect(() => {
-    if (!pinId) return;
-    apiFetch<Pin>(`/pins/${pinId}`)
-      .then((data) => {
-        setPin(data);
-        setVoteCount(data._count?.votes ?? 0);
-        setHasVoted(data.userHasVoted ?? false);
-      })
-      .catch(() => setPin(null))
-      .finally(() => setLoading(false));
-  }, [pinId]);
-
-  const handleVote = async () => {
-    if (!user || !pin || voteLoading) return;
-    setVoteLoading(true);
-    try {
-      if (hasVoted) {
-        await apiFetch<{ voteCount: number }>(`/pins/${pin.id}/vote`, {
-          method: "DELETE",
-        });
-        setVoteCount((c) => c - 1);
-        setHasVoted(false);
-      } else {
-        const res = await apiFetch<{ voteCount: number }>(`/pins/${pin.id}/vote`, {
-          method: "POST",
-        });
-        setVoteCount(res.voteCount);
-        setHasVoted(true);
-      }
-    } catch {
-      toast.error("Failed to vote");
-    } finally {
-      setVoteLoading(false);
+    if (pin) {
+      setComments(pin.comments);
+      setVoteCount(pin._count.votes);
+      setSaveCount(Math.max(18, Math.round(pin._count.votes * 1.6)));
+      setIsSaved(false);
     }
-  };
+  }, [pin]);
 
-  const handleComment = async (e: React.FormEvent, parentId?: string) => {
-    e.preventDefault();
-    if (!user || !pin || !commentText.trim() || commentLoading) return;
-    setCommentLoading(true);
-    try {
-      await apiFetch(`/pins/${pin.id}/comments`, {
-        method: "POST",
-        body: { content: commentText.trim(), parentId },
-      });
-      setCommentText("");
-      const updated = await apiFetch<Pin>(`/pins/${pinId}`);
-      setPin(updated);
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to add comment");
-    } finally {
-      setCommentLoading(false);
-    }
-  };
+  const relatedPins = useMemo(() => {
+    if (!pin) return [];
 
-  if (loading || !pin) {
+    return getPinsForCircle(pin.circle.slug)
+      .filter((candidate) => candidate.id !== pin.id)
+      .slice(0, 3);
+  }, [pin]);
+
+  const whyItWorks = useMemo(() => {
+    if (!pin) return [];
+
+    const reasons = [
+      `Belongs to ${pin.circle.name}, so it lands inside an active taste-based community instead of a generic gallery.`,
+      `${voteCount} people have already pushed it up, which gives the post social proof beyond the image itself.`,
+      `${comments.length} comments add explanation, reaction, and context around why this one is worth keeping.`,
+    ];
+
+    return reasons;
+  }, [pin, voteCount, comments.length]);
+
+  if (!pin) {
     return (
-      <div className="max-w-4xl mx-auto px-4 py-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <div className="aspect-[4/5] bg-circle-surface rounded-2xl animate-pulse" />
-          <div className="space-y-4">
-            <div className="h-8 bg-circle-surface rounded animate-pulse w-3/4" />
-            <div className="h-4 bg-circle-surface rounded animate-pulse w-1/2" />
-          </div>
+      <div className="section-shell py-8">
+        <div className="glass-panel rounded-[2rem] p-10 text-center">
+          <p className="font-display text-2xl font-bold text-circle-ink">Pin not found.</p>
         </div>
       </div>
     );
   }
 
+  const handleComment = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!commentText.trim()) return;
+    const next: DemoComment = {
+      id: `comment-${Date.now()}`,
+      content: commentText.trim(),
+      createdAt: new Date().toISOString(),
+      user: { id: "local-user", username: user?.username ?? "guest" },
+    };
+    setComments((prev) => [next, ...prev]);
+    setCommentText("");
+  };
+
+  const appendReplyToThread = (
+    items: DemoComment[],
+    parentId: string,
+    reply: DemoComment
+  ): DemoComment[] =>
+    items.map((comment) => {
+      if (comment.id === parentId) {
+        return { ...comment, replies: [...(comment.replies ?? []), reply] };
+      }
+
+      if (!comment.replies?.length) {
+        return comment;
+      }
+
+      return {
+        ...comment,
+        replies: appendReplyToThread(comment.replies, parentId, reply),
+      };
+    });
+
+  const handleReply = async (content: string, parentId: string) => {
+    setComments((prev) =>
+      appendReplyToThread(prev, parentId, {
+        id: `reply-${Date.now()}`,
+        content,
+        createdAt: new Date().toISOString(),
+        user: { id: "local-user", username: user?.username ?? "guest" },
+      })
+    );
+  };
+
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        <div className="relative aspect-[4/5] rounded-2xl overflow-hidden bg-white shadow border border-circle-border">
-          <Image
-            src={pin.imageUrl}
-            alt={pin.title}
-            fill
-            className="object-cover"
-            priority
-          />
+    <div className="section-shell py-8 sm:py-10">
+      <div className="grid gap-8 lg:grid-cols-[0.95fr_1.05fr]">
+        <div className="overflow-hidden rounded-[2rem] border border-white/70 bg-white/80 shadow-xl shadow-amber-950/5">
+          <div className="relative aspect-[4/5]">
+            <Image src={pin.imageUrl} alt={pin.title} fill className="object-cover" priority />
+          </div>
         </div>
-        <div>
-          {pin.circle && (
+
+        <div className="glass-panel rounded-[2rem] p-6 sm:p-8">
+          <p className="text-sm font-semibold uppercase tracking-[0.22em] text-circle-primary">
+            {pin.circle.name}
+          </p>
+          <h1 className="mt-3 font-display text-4xl font-bold leading-tight text-circle-ink">
+            {pin.title}
+          </h1>
+          <p className="mt-3 text-base leading-7 text-circle-accent">{pin.description}</p>
+          <p className="mt-4 text-sm font-medium uppercase tracking-[0.16em] text-circle-accent">
+            by {pin.author.username}
+          </p>
+
+          <div className="mt-6 flex flex-wrap gap-3">
+            <button
+              onClick={() => {
+                setHasVoted((prev) => !prev);
+                setVoteCount((prev) => prev + (hasVoted ? -1 : 1));
+              }}
+              className={`rounded-full px-4 py-2 text-sm font-semibold ${
+                hasVoted
+                  ? "bg-circle-primary text-white"
+                  : "border border-circle-border bg-white text-circle-ink hover:bg-circle-mist"
+              }`}
+            >
+              ▲ {voteCount} votes
+            </button>
+            <span className="rounded-full border border-circle-border bg-white px-4 py-2 text-sm font-semibold text-circle-ink">
+              {comments.length} comments
+            </span>
+            <button
+              onClick={() => {
+                setIsSaved((prev) => !prev);
+                setSaveCount((prev) => prev + (isSaved ? -1 : 1));
+              }}
+              className={`rounded-full px-4 py-2 text-sm font-semibold ${
+                isSaved
+                  ? "bg-circle-ink text-white"
+                  : "border border-circle-border bg-white text-circle-ink hover:bg-circle-mist"
+              }`}
+            >
+              {isSaved ? "Saved" : "Save"} · {saveCount}
+            </button>
             <Link
               href={`/circles/${pin.circle.slug}`}
-              className="text-sm text-circle-primary font-medium hover:underline"
+              className="rounded-full border border-circle-border bg-white px-4 py-2 text-sm font-semibold text-circle-ink hover:bg-circle-mist"
             >
-              {pin.circle.name}
+              More from {pin.circle.name}
             </Link>
-          )}
-          <h1 className="text-2xl font-bold mt-1">{pin.title}</h1>
-          <p className="text-circle-accent text-sm mt-1">
-            by {pin.author?.username}
-          </p>
-          {pin.description && (
-            <p className="mt-4 text-gray-700">{pin.description}</p>
-          )}
-          <div className="flex items-center gap-4 mt-4">
-            {user && (
-              <button
-                onClick={handleVote}
-                disabled={voteLoading}
-                className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium ${
-                  hasVoted
-                    ? "bg-circle-primary text-white"
-                    : "bg-circle-surface hover:bg-circle-border"
-                }`}
-              >
-                ▲ {voteCount}
-              </button>
-            )}
-            {!user && <span className="text-sm text-circle-accent">▲ {voteCount} votes</span>}
-            <span className="text-sm text-circle-accent">
-              {pin._count?.comments ?? pin.comments?.length ?? 0} comments
-            </span>
           </div>
 
-          <div className="mt-8">
-            <h3 className="font-semibold mb-4">Comments</h3>
-            {user && (
-              <form onSubmit={(e) => handleComment(e)} className="mb-6">
-                <textarea
-                  value={commentText}
-                  onChange={(e) => setCommentText(e.target.value)}
-                  placeholder="Add a comment..."
-                  rows={2}
-                  className="w-full px-4 py-2 rounded-lg border border-circle-border focus:ring-2 focus:ring-circle-primary mb-2"
+          <div className="mt-8 grid gap-4 md:grid-cols-[1fr_0.9fr]">
+            <div className="rounded-[1.5rem] border border-circle-border bg-white/85 p-5">
+              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-circle-accent">
+                Why This Pin Works
+              </p>
+              <div className="mt-4 space-y-3 text-sm leading-6 text-circle-ink">
+                {whyItWorks.map((reason) => (
+                  <p key={reason}>{reason}</p>
+                ))}
+              </div>
+            </div>
+            <div className="rounded-[1.5rem] border border-circle-border bg-circle-ink p-5 text-white">
+              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-white/65">
+                Post Snapshot
+              </p>
+              <div className="mt-4 space-y-3 text-sm leading-6 text-white/85">
+                <p><span className="font-semibold text-white">Circle:</span> {pin.circle.name}</p>
+                <p><span className="font-semibold text-white">Signal:</span> strong save plus discussion energy</p>
+                <p><span className="font-semibold text-white">Best for:</span> people looking for both reference and commentary</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-8 border-t border-circle-border pt-6">
+            <h2 className="font-display text-2xl font-bold text-circle-ink">Comments</h2>
+            <form onSubmit={handleComment} className="mt-4">
+              <textarea
+                value={commentText}
+                onChange={(e) => setCommentText(e.target.value)}
+                placeholder="Add a comment..."
+                rows={3}
+                className="w-full rounded-2xl border border-circle-border bg-white/90 px-4 py-3 text-sm outline-none focus:border-circle-primary"
+              />
+              <button
+                type="submit"
+                className="mt-3 rounded-full bg-circle-primary px-4 py-2 text-sm font-semibold text-white hover:bg-circle-secondary"
+              >
+                Post Comment
+              </button>
+            </form>
+            <div className="mt-6 space-y-4">
+              {comments.map((comment) => (
+                <CommentThread
+                  key={comment.id}
+                  comment={comment}
+                  pinId={pin.id}
+                  currentUsername={user?.username}
+                  onReply={handleReply}
                 />
-                <button
-                  type="submit"
-                  disabled={commentLoading || !commentText.trim()}
-                  className="px-4 py-2 rounded-full bg-circle-primary text-white text-sm font-medium hover:bg-circle-secondary disabled:opacity-50"
-                >
-                  {commentLoading ? "Posting..." : "Comment"}
-                </button>
-              </form>
-            )}
-            <div className="space-y-4">
-              {pin.comments?.length ? (
-                pin.comments.map((c) => (
-                  <div key={c.id} className="border-l-2 border-circle-border pl-4">
-                    <p className="text-sm font-medium">{c.user.username}</p>
-                    <p className="text-gray-700">{c.content}</p>
-                    <p className="text-xs text-circle-accent mt-1">
-                      {new Date(c.createdAt).toLocaleDateString()}
-                    </p>
-                    {c.replies?.map((r) => (
-                      <div key={r.id} className="mt-2 ml-4 border-l-2 border-circle-light pl-4">
-                        <p className="text-sm font-medium">{r.user.username}</p>
-                        <p className="text-gray-700">{r.content}</p>
-                        <p className="text-xs text-circle-accent mt-1">
-                          {new Date(r.createdAt).toLocaleDateString()}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                ))
-              ) : (
-                <p className="text-circle-accent text-sm">No comments yet.</p>
-              )}
+              ))}
             </div>
           </div>
         </div>
       </div>
+
+      {relatedPins.length > 0 && (
+        <div className="mt-10">
+          <div className="mb-4 flex items-end justify-between gap-4">
+            <div>
+              <p className="text-sm font-semibold uppercase tracking-[0.22em] text-circle-accent">
+                Keep Exploring
+              </p>
+              <h2 className="mt-2 font-display text-3xl font-bold text-circle-ink">
+                More from {pin.circle.name}
+              </h2>
+            </div>
+            <Link
+              href={`/circles/${pin.circle.slug}`}
+              className="text-sm font-semibold text-circle-primary hover:underline"
+            >
+              View circle
+            </Link>
+          </div>
+          <div className="pin-grid">
+            {relatedPins.map((relatedPin) => (
+              <PinCard key={relatedPin.id} pin={relatedPin} />
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

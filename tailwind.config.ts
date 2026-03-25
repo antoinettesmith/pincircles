@@ -9,30 +9,34 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        pinterest: {
-          red: "#E60023",
-          dark: "#111111",
-          gray: "#767676",
-          light: "#EFEFEF",
-        },
         circle: {
-          primary: "#E60023",
-          secondary: "#BD081C",
-          accent: "#8E8E93",
-          surface: "#F7F7F7",
-          border: "#E1E1E1",
+          primary: "#C1121F",
+          secondary: "#780000",
+          accent: "#5C677D",
+          surface: "#FFF7F1",
+          border: "#E8D8C8",
+          ink: "#241C15",
+          warm: "#F3E9DC",
+          gold: "#F4B942",
+          mist: "#FAF4EE",
         },
       },
       fontFamily: {
-        sans: ["var(--font-sans)", "system-ui", "sans-serif"],
+        sans: ["Avenir Next", "Segoe UI", "Helvetica Neue", "Arial", "sans-serif"],
+        display: ["ui-rounded", "Trebuchet MS", "Avenir Next", "Segoe UI", "sans-serif"],
       },
       animation: {
         "fade-in": "fadeIn 0.3s ease-out",
+        float: "float 8s ease-in-out infinite",
       },
       keyframes: {
         fadeIn: {
           "0%": { opacity: "0", transform: "translateY(-10px)" },
           "100%": { opacity: "1", transform: "translateY(0)" },
+        },
+        float: {
+          "0%, 100%": { transform: "translateY(0px)" },
+          "50%": { transform: "translateY(-10px)" },
         },
       },
     },

@@ -34,58 +34,69 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center px-4">
-      <div className="w-full max-w-md">
-        <h1 className="text-3xl font-bold text-center mb-6">Create your account</h1>
-        <form onSubmit={handleSubmit} className="space-y-4 bg-white p-8 rounded-2xl shadow-lg border border-circle-border">
-          <div>
-            <label className="block text-sm font-medium mb-1">Email</label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              className="w-full px-4 py-2 rounded-lg border border-circle-border focus:ring-2 focus:ring-circle-primary focus:border-transparent"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Username</label>
-            <input
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              required
-              minLength={2}
-              pattern="[a-zA-Z0-9_]+"
-              className="w-full px-4 py-2 rounded-lg border border-circle-border focus:ring-2 focus:ring-circle-primary focus:border-transparent"
-            />
-            <p className="text-xs text-circle-accent mt-1">Letters, numbers, and underscores only</p>
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Password</label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              minLength={6}
-              className="w-full px-4 py-2 rounded-lg border border-circle-border focus:ring-2 focus:ring-circle-primary focus:border-transparent"
-            />
-          </div>
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full py-3 rounded-full bg-circle-primary text-white font-medium hover:bg-circle-secondary disabled:opacity-50 transition-colors"
-          >
-            {loading ? "Creating account..." : "Sign up"}
-          </button>
-        </form>
-        <p className="text-center mt-4 text-circle-accent">
-          Already have an account?{" "}
-          <Link href="/login" className="text-circle-primary font-medium hover:underline">
-            Log in
-          </Link>
-        </p>
+    <div className="section-shell py-10 sm:py-16">
+      <div className="grid items-center gap-8 lg:grid-cols-[0.95fr_0.75fr]">
+        <div className="space-y-5">
+          <p className="text-sm font-semibold uppercase tracking-[0.24em] text-circle-accent">Create an account</p>
+          <h1 className="max-w-xl font-display text-5xl font-bold leading-tight text-circle-ink">
+            Start a visual identity people want to follow.
+          </h1>
+          <p className="max-w-xl text-lg leading-8 text-circle-accent">
+            Join circles, post inspiration, and help shape what rises to the top with taste and discussion.
+          </p>
+        </div>
+
+        <div className="glass-panel w-full rounded-[2rem] p-8">
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="mb-1 block text-sm font-semibold text-circle-ink">Email</label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                className="w-full rounded-2xl border border-circle-border bg-white/90 px-4 py-3 focus:border-circle-primary focus:outline-none"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-semibold text-circle-ink">Username</label>
+              <input
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                required
+                minLength={2}
+                pattern="[a-zA-Z0-9_]+"
+                className="w-full rounded-2xl border border-circle-border bg-white/90 px-4 py-3 focus:border-circle-primary focus:outline-none"
+              />
+              <p className="mt-1 text-xs text-circle-accent">Letters, numbers, and underscores only</p>
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-semibold text-circle-ink">Password</label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                minLength={6}
+                className="w-full rounded-2xl border border-circle-border bg-white/90 px-4 py-3 focus:border-circle-primary focus:outline-none"
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full rounded-full bg-circle-primary py-3 text-base font-semibold text-white shadow-lg shadow-circle-primary/20 transition-colors hover:bg-circle-secondary disabled:opacity-50"
+            >
+              {loading ? "Creating account..." : "Sign up"}
+            </button>
+          </form>
+          <p className="mt-5 text-center text-circle-accent">
+            Already have an account?{" "}
+            <Link href="/login" className="font-semibold text-circle-primary hover:underline">
+              Log in
+            </Link>
+          </p>
+        </div>
       </div>
     </div>
   );
