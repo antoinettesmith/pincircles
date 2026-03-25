@@ -60,18 +60,13 @@ export function CirclesClient() {
   return (
     <div className="section-shell py-8 sm:py-10">
       <section className="mb-8 grid gap-6 lg:grid-cols-[0.95fr_1.05fr]">
-        <div className="rounded-[2rem] border border-circle-border bg-circle-ink p-6 text-white shadow-2xl shadow-amber-950/10 sm:p-8">
+        <div className="self-start rounded-[2rem] border border-circle-border bg-circle-ink p-6 text-white shadow-2xl shadow-amber-950/10 sm:p-8">
           <h1 className="mt-3 font-display text-4xl font-bold leading-tight sm:text-5xl">
             Explore circles that feel curated, distinct, and alive.
           </h1>
           <p className="mt-4 max-w-xl text-base leading-7 text-white/72">
             Find communities built around shared taste, niche obsessions, and posts worth following.
           </p>
-          <div className="mt-6 flex flex-wrap gap-3 text-sm text-white/75">
-            <span>{demoCircles.length} curated circles</span>
-            <span>taste-driven discovery</span>
-            <span>visual posts with conversation</span>
-          </div>
         </div>
 
         <div className="glass-panel rounded-[2rem] p-6 sm:p-8">
@@ -109,7 +104,11 @@ export function CirclesClient() {
               ))}
             </div>
           </div>
-          <div className="mt-4 flex flex-wrap gap-2">
+          <div className="mt-4">
+            <p className="text-sm font-semibold uppercase tracking-[0.22em] text-circle-accent">
+              Browse By Topic
+            </p>
+            <div className="mt-3 flex flex-wrap gap-2">
             <button
               onClick={() => setSelectedCategory(null)}
               className={`rounded-full px-4 py-2 text-sm font-semibold ${
@@ -129,12 +128,13 @@ export function CirclesClient() {
                 {category}
               </button>
             ))}
+            </div>
           </div>
         </div>
       </section>
 
       {selectedLens === "all" && !search && !selectedCategory && spotlightCircles.length > 0 && (
-        <section className="mb-8">
+        <section className="mb-10 rounded-[2rem] border border-white/70 bg-white/55 p-5 shadow-lg shadow-amber-950/5 sm:p-6">
           <div className="mb-4 flex items-end justify-between gap-4">
             <div>
               <p className="text-sm font-semibold uppercase tracking-[0.22em] text-circle-accent">
@@ -150,7 +150,7 @@ export function CirclesClient() {
               <Link
                 key={circle.id}
                 href={`/circles/${circle.slug}`}
-                className="rounded-[1.75rem] border border-white/70 bg-white/85 p-5 shadow-lg shadow-amber-950/5 transition hover:-translate-y-1 hover:shadow-2xl hover:shadow-amber-950/10"
+                className="rounded-[1.75rem] border border-white/80 bg-white p-5 shadow-lg shadow-amber-950/5 transition hover:-translate-y-1 hover:shadow-2xl hover:shadow-amber-950/10"
               >
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-circle-accent">
                   {circle.category.name}

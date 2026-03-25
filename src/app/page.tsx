@@ -36,7 +36,7 @@ export default function HomePage() {
             </div>
             <div className="grid max-w-2xl gap-4 sm:grid-cols-3">
               {[
-                { value: "Boards + threads", label: "Visual-first posts with social momentum" },
+                { value: "Boards + threads", label: "Visual posts with social momentum" },
                 { value: "Niche circles", label: "Communities built around taste and topics" },
                 { value: "Votes that matter", label: "Signal-rich sorting for what deserves attention" },
               ].map((item) => (
@@ -107,10 +107,10 @@ export default function HomePage() {
             <p className="mt-2 font-display text-2xl font-bold text-circle-ink">A concept that feels native to Pinterest craft.</p>
           </div>
           <p className="text-sm leading-7 text-circle-accent">
-            Strong visual hierarchy, community mechanics, and a warmer editorial interface make the idea feel more memorable.
+            PinCircles treats saved inspiration like the start of a conversation, not the end of one.
           </p>
           <p className="text-sm leading-7 text-circle-accent">
-            This version positions PinCircles as a product with point of view instead of only a CRUD exercise.
+            The result feels more like a living taste community than a static board of disconnected posts.
           </p>
         </div>
       </section>

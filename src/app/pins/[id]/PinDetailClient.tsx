@@ -45,18 +45,6 @@ export function PinDetailClient({ params }: PinDetailClientProps) {
       .slice(0, 3);
   }, [pin]);
 
-  const whyItWorks = useMemo(() => {
-    if (!pin) return [];
-
-    const reasons = [
-      `Belongs to ${pin.circle.name}, so it lands inside an active taste-based community instead of a generic gallery.`,
-      `${voteCount} people have already pushed it up, which gives the post social proof beyond the image itself.`,
-      `${comments.length} comments add explanation, reaction, and context around why this one is worth keeping.`,
-    ];
-
-    return reasons;
-  }, [pin, voteCount, comments.length]);
-
   if (!pin) {
     return (
       <div className="section-shell py-8">
@@ -114,7 +102,7 @@ export function PinDetailClient({ params }: PinDetailClientProps) {
   return (
     <div className="section-shell py-8 sm:py-10">
       <div className="grid gap-8 lg:grid-cols-[0.95fr_1.05fr]">
-        <div className="overflow-hidden rounded-[2rem] border border-white/70 bg-white/80 shadow-xl shadow-amber-950/5">
+        <div className="self-start overflow-hidden rounded-[2rem] border border-white/70 bg-white/80 shadow-xl shadow-amber-950/5">
           <div className="relative aspect-[4/5]">
             <Image src={pin.imageUrl} alt={pin.title} fill className="object-cover" priority />
           </div>
@@ -168,29 +156,6 @@ export function PinDetailClient({ params }: PinDetailClientProps) {
             >
               More from {pin.circle.name}
             </Link>
-          </div>
-
-          <div className="mt-8 grid gap-4 md:grid-cols-[1fr_0.9fr]">
-            <div className="rounded-[1.5rem] border border-circle-border bg-white/85 p-5">
-              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-circle-accent">
-                Why This Pin Works
-              </p>
-              <div className="mt-4 space-y-3 text-sm leading-6 text-circle-ink">
-                {whyItWorks.map((reason) => (
-                  <p key={reason}>{reason}</p>
-                ))}
-              </div>
-            </div>
-            <div className="rounded-[1.5rem] border border-circle-border bg-circle-ink p-5 text-white">
-              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-white/65">
-                Post Snapshot
-              </p>
-              <div className="mt-4 space-y-3 text-sm leading-6 text-white/85">
-                <p><span className="font-semibold text-white">Circle:</span> {pin.circle.name}</p>
-                <p><span className="font-semibold text-white">Signal:</span> strong save plus discussion energy</p>
-                <p><span className="font-semibold text-white">Best for:</span> people looking for both reference and commentary</p>
-              </div>
-            </div>
           </div>
 
           <div className="mt-8 border-t border-circle-border pt-6">
