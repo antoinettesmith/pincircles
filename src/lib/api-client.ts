@@ -2,7 +2,8 @@
  * API client for frontend - handles auth token and requests
  */
 
-const API_BASE = "/api";
+const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH || "";
+const API_BASE = `${BASE_PATH}/api`;
 
 function getToken(): string | null {
   if (typeof window === "undefined") return null;
